@@ -8,6 +8,7 @@ Comprehensive Culvert Analysis System (updated)
 - Safer NOAA flood event parsing
 - CRS-safe buffering / reprojection for proximity analysis
 - Better error handling and clear messages
+- Fixed location handling for both counties and independent cities
 """
 
 import os
@@ -31,38 +32,58 @@ class CulvertAnalysisSystem:
         self.risk_assessments = None
         self.bbox = None  # [west, south, east, north]
 
-    def set_location_by_county_state(self, county, state, country="USA"):
+    def set_location_by_county_state(self, location, state, country="USA"):
         """
-        Determine bounding box for "County, State" using Nominatim (OpenStreetMap).
+        Determine bounding box for "Location, State" using Nominatim (OpenStreetMap).
+        Works for both counties and independent cities.
         Sets self.bbox = [west, south, east, north]
+        
+        Args:
+            location: County name (e.g., "Fairfax") or city name (e.g., "Virginia Beach")
+            state: State name (e.g., "Virginia")
+            country: Country name (default "USA")
         """
-        print(f"Setting location to {county}, {state}")
-        # Use Nominatim search for county bounding box
+        print(f"Setting location to {location}, {state}")
+        
+        # Use Nominatim search - try multiple search patterns for better coverage
         url = "https://nominatim.openstreetmap.org/search"
-        q = f"{county} County, {state}, {country}"
-        params = {"q": q, "format": "json", "limit": 1}
-        headers = {"User-Agent": "culvert-analysis/1.0 (consultrmk@gmail.com"}  # change contact if desired
-
-        try:
-            r = requests.get(url, params=params, headers=headers, timeout=15)
-            r.raise_for_status()
-            results = r.json()
-            if not results:
-                print("Location not found via Nominatim. Please provide bbox manually or check names.")
-                return
-            bb = results[0].get("boundingbox", None)
-            if not bb or len(bb) != 4:
-                print("No bounding box returned by geocoder.")
-                return
-            # Nominatim boundingbox format: [south_lat, north_lat, west_lon, east_lon]
-            south_lat = float(bb[0])
-            north_lat = float(bb[1])
-            west_lon = float(bb[2])
-            east_lon = float(bb[3])
-            self.bbox = [west_lon, south_lat, east_lon, north_lat]
-            print(f"Bounding box set to: {self.bbox}")
-        except Exception as e:
-            print(f"Error getting bbox from Nominatim: {e}")
+        headers = {"User-Agent": "culvert-analysis/1.0 (email@example.com)"}  # change contact if desired
+        
+        # Try different search patterns in order of preference
+        search_patterns = [
+            f"{location}, {state}, {country}",  # General pattern (works for both counties and cities)
+            f"{location} County, {state}, {country}",  # Explicit county
+            f"{location} city, {state}, {country}",  # Explicit city
+            f"{location} City, {state}, {country}",  # Capitalized city
+        ]
+        
+        for pattern in search_patterns:
+            params = {"q": pattern, "format": "json", "limit": 1}
+            
+            try:
+                r = requests.get(url, params=params, headers=headers, timeout=15)
+                r.raise_for_status()
+                results = r.json()
+                
+                if results:
+                    bb = results[0].get("boundingbox", None)
+                    if bb and len(bb) == 4:
+                        # Nominatim boundingbox format: [south_lat, north_lat, west_lon, east_lon]
+                        south_lat = float(bb[0])
+                        north_lat = float(bb[1])
+                        west_lon = float(bb[2])
+                        east_lon = float(bb[3])
+                        self.bbox = [west_lon, south_lat, east_lon, north_lat]
+                        print(f"Found location using pattern: '{pattern}'")
+                        print(f"Bounding box set to: {self.bbox}")
+                        return
+                        
+            except Exception as e:
+                print(f"Error trying pattern '{pattern}': {e}")
+                continue
+        
+        print("Location not found via Nominatim with any search pattern.")
+        print("Please provide bbox manually or check location/state names.")
 
     def collect_culvert_data(self):
         """
@@ -72,7 +93,7 @@ class CulvertAnalysisSystem:
         print("Collecting culvert data from ArcGIS REST service...")
 
         if self.bbox is None:
-            print("No location set. Please call set_location_by_county_state(county, state) first.")
+            print("No location set. Please call set_location_by_county_state(location, state) first.")
             return None
 
         base_url = "https://services.arcgis.com/v01gqwM5QqNysAAi/arcgis/rest/services/stream_crossings/FeatureServer/0/query"
@@ -613,8 +634,8 @@ class CulvertAnalysisSystem:
 
         # Add a simple legend (fixed-position HTML)
         legend_html = '''
-        <div style="position: fixed; 
-                    bottom: 50px; left: 50px; width: 160px; height: 140px; 
+        <div style="position: fixed;
+                    bottom: 50px; left: 50px; width: 160px; height: 140px;
                     background-color: white; z-index:9999; padding: 10px; border:2px solid grey;">
         <b>Map legend</b><br>
         &nbsp;<i class="fa fa-circle" style="color:red"></i>&nbsp;High Risk Culvert<br>
@@ -671,8 +692,8 @@ class CulvertAnalysisSystem:
 # Example run guard for direct execution (keeps module import safe)
 if __name__ == "__main__":
     cas = CulvertAnalysisSystem()
-    # Example: change county/state as needed
-    cas.set_location_by_county_state("Baltimore", "Maryland")
+    # Example: Now works for both counties and independent cities
+    cas.set_location_by_county_state("Virginia Beach", "Virginia")
     cas.collect_culvert_data()
     cas.collect_stream_gauge_data()
     cas.collect_flood_event_data()
