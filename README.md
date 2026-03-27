@@ -1,6 +1,4 @@
-This is a professional, high-end `README.md` template designed to impress recruiters and technical collaborators alike. It emphasizes engineering rigor, data science maturity, and geospatial expertise.
 
-***
 
 # 🌊 Culverts: Precision Geospatial Flood Risk Framework
 
