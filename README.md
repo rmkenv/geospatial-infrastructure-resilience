@@ -45,7 +45,7 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername//geospatial-infrastructure-resilience.git
+git clone https://github.com/rmkenv/geospatial-infrastructure-resilience.git
 cd culverts
 
 # Create a virtual environment
