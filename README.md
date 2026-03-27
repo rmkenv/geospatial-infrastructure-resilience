@@ -105,13 +105,3 @@ Contributions are what make the open-source community an amazing place to learn,
 
 Distributed under the MIT License. See `LICENSE` for more information.
 
----
-
-## 📫 Contact
-
-**Your Name** - [LinkedIn](https://linkedin.com/in/yourprofile) - [Email](mailto:your.email@example.com)
-
-**Project Link:** [https://github.com/yourusername/culverts](https://github.com/yourusername/culverts)
-
-***
-*Developed with ❤️ for resilient infrastructure.*
